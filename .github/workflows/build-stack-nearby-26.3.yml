@@ -81,6 +81,38 @@ jobs:
                   "(SDLMouse.SDL_GetMouseState(null, null) & (1 << (key + MOUSE_BUTTON_CODE_OFFSET - 1))) != 0"
               )
               p.write_text(s)
+
+          # 26.3 moved dropping the selected hotbar item from LocalPlayer.drop(boolean)
+          # to MultiPlayerGameMode.dropItem(LocalPlayer, boolean). Move the favorite-slot
+          # protection mixin to the new method and stop loading the obsolete LocalPlayer mixin.
+          p = Path("src/main/resources/stacktonearbychests.mixins.json")
+          mixins = p.read_text().replace('    "LocalPlayerMixin",\n', '')
+          p.write_text(mixins)
+
+          p = Path("src/main/java/io/github/xiaocihua/stacktonearbychests/mixin/MultiPlayerGameModeMixin.java")
+          code = p.read_text()
+          code = code.replace(
+              "import net.minecraft.client.multiplayer.MultiPlayerGameMode;\n",
+              "import net.minecraft.client.multiplayer.MultiPlayerGameMode;\nimport net.minecraft.client.player.LocalPlayer;\n"
+          )
+          marker = "\n}\n"
+          injection = r'''
+    @Inject(method = "dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V", at = @At("HEAD"), cancellable = true)
+    private void beforeDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {
+        int selectedSlot = player.getInventory().getSelectedSlot();
+        if (LockedSlots.beforeDropSelectedItem(selectedSlot) == InteractionResult.FAIL) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V", at = @At("TAIL"))
+    private void afterDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {
+        LockedSlots.afterDropSelectedItem(player.getInventory().getSelectedSlot());
+    }
+'''
+          if "beforeDropSelectedItem(LocalPlayer player" not in code:
+              code = code.rsplit(marker, 1)[0] + "\n" + injection + marker
+          p.write_text(code)
           PY
 
       - name: Build
