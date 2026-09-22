@@ -51,6 +51,36 @@ jobs:
           p = Path("src/main/resources/fabric.mod.json")
           s = p.read_text().replace('"minecraft": ">=26.2"', '"minecraft": ">=26.3"')
           p.write_text(s)
+
+          # Minecraft 26.3 migrated input handling from GLFW to SDL3.
+          for p in Path("src/main/java").rglob("*.java"):
+              s = p.read_text()
+              s = s.replace("import org.lwjgl.glfw.GLFW;", "import org.lwjgl.sdl.SDLMouse;\nimport org.lwjgl.sdl.SDLScancode;")
+              replacements = {
+                  "GLFW.GLFW_KEY_LEFT_ALT": "SDLScancode.SDL_SCANCODE_LALT",
+                  "GLFW.GLFW_KEY_LEFT_CONTROL": "SDLScancode.SDL_SCANCODE_LCTRL",
+                  "GLFW.GLFW_KEY_S": "SDLScancode.SDL_SCANCODE_S",
+                  "GLFW.GLFW_KEY_C": "SDLScancode.SDL_SCANCODE_C",
+                  "GLFW.GLFW_KEY_ESCAPE": "SDLScancode.SDL_SCANCODE_ESCAPE",
+                  "GLFW.GLFW_KEY_ENTER": "SDLScancode.SDL_SCANCODE_RETURN",
+                  "GLFW.GLFW_KEY_BACKSPACE": "SDLScancode.SDL_SCANCODE_BACKSPACE",
+                  "GLFW.GLFW_MOUSE_BUTTON_2": "SDLMouse.SDL_BUTTON_RIGHT",
+                  "GLFW.GLFW_MOUSE_BUTTON_LEFT": "SDLMouse.SDL_BUTTON_LEFT",
+                  "InputConstants.Type.KEYSYM": "InputConstants.Type.KEYBOARD",
+                  "InputConstants.isKeyDown(window, key)": "InputConstants.isKeyDown(key)",
+              }
+              for a, b in replacements.items():
+                  s = s.replace(a, b)
+              s = s.replace(
+                  "SDLMouse.glfwGetMouseButton(window.handle(), key + MOUSE_BUTTON_CODE_OFFSET) == SDLMouse.GLFW_PRESS",
+                  "(SDLMouse.SDL_GetMouseState(null, null) & (1 << (key + MOUSE_BUTTON_CODE_OFFSET - 1))) != 0"
+              )
+              # The previous replacement above cannot catch the original static call after import conversion.
+              s = s.replace(
+                  "GLFW.glfwGetMouseButton(window.handle(), key + MOUSE_BUTTON_CODE_OFFSET) == GLFW.GLFW_PRESS",
+                  "(SDLMouse.SDL_GetMouseState(null, null) & (1 << (key + MOUSE_BUTTON_CODE_OFFSET - 1))) != 0"
+              )
+              p.write_text(s)
           PY
 
       - name: Build
