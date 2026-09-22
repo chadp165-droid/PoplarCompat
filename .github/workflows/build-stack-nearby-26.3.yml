@@ -96,20 +96,19 @@ jobs:
               "import net.minecraft.client.multiplayer.MultiPlayerGameMode;\nimport net.minecraft.client.player.LocalPlayer;\n"
           )
           marker = "\n}\n"
-          injection = r'''
-    @Inject(method = "dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V", at = @At("HEAD"), cancellable = true)
-    private void beforeDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {
-        int selectedSlot = player.getInventory().getSelectedSlot();
-        if (LockedSlots.beforeDropSelectedItem(selectedSlot) == InteractionResult.FAIL) {
-            ci.cancel();
-        }
-    }
-
-    @Inject(method = "dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V", at = @At("TAIL"))
-    private void afterDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {
-        LockedSlots.afterDropSelectedItem(player.getInventory().getSelectedSlot());
-    }
-'''
+          injection = (
+              "\n    @Inject(method = \"dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V\", at = @At(\"HEAD\"), cancellable = true)\n"
+              "    private void beforeDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {\n"
+              "        int selectedSlot = player.getInventory().getSelectedSlot();\n"
+              "        if (LockedSlots.beforeDropSelectedItem(selectedSlot) == InteractionResult.FAIL) {\n"
+              "            ci.cancel();\n"
+              "        }\n"
+              "    }\n\n"
+              "    @Inject(method = \"dropItem(Lnet/minecraft/client/player/LocalPlayer;Z)V\", at = @At(\"TAIL\"))\n"
+              "    private void afterDropSelectedItem(LocalPlayer player, boolean all, CallbackInfo ci) {\n"
+              "        LockedSlots.afterDropSelectedItem(player.getInventory().getSelectedSlot());\n"
+              "    }\n"
+          )
           if "beforeDropSelectedItem(LocalPlayer player" not in code:
               code = code.rsplit(marker, 1)[0] + "\n" + injection + marker
           p.write_text(code)
