@@ -21,9 +21,7 @@ jobs:
 
       - name: Clone upstream
         run: |
-          git clone https://github.com/xiaocihua/stack-to-nearby-chests.git upstream
-          cd upstream
-          git checkout 6c2069be57472539d18d91070d69a9357b21be02
+          git clone --depth=1 --branch master https://github.com/xiaocihua/stack-to-nearby-chests.git upstream
 
       - name: Port build metadata to Minecraft 26.3
         run: |
